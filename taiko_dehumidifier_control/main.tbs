@@ -1,0 +1,135 @@
+include "global.tbh"
+
+declare sub turn_on()
+declare sub push_power()
+declare sub push_mode()
+declare function detect_led() as no_yes
+declare sub signal_strength_indication_init()
+
+dim ff as dword
+
+'====================================================================
+
+sub on_sys_init()
+	dim f as word
+	
+	signal_strength_indication_init()
+	
+	for f=0 to 40000
+	next f
+	
+	sys.onsystimerperiod=100
+
+	io.num=PL_IO_NUM_8_RX0
+	io.enabled=YES
+	
+	io.num=PL_IO_NUM_9_TX0
+	io.enabled=YES
+
+	turn_on()
+
+	ff=0
+end sub
+
+sub on_sys_timer()
+	ff=ff+1
+	if ff>=86400 then
+		ff=0
+
+		turn_on()
+	end if
+
+end sub
+
+sub turn_on()
+	
+	push_power()
+	if detect_led()=YES then
+		exit sub
+	end if
+	
+	push_mode()	
+	if detect_led()=YES then
+		exit sub
+	end if
+	
+	push_mode()	
+	if detect_led()=YES then
+		exit sub
+	end if
+	
+	push_power()
+	if detect_led()=YES then
+		exit sub
+	end if
+	
+	push_mode()	
+	if detect_led()=YES then
+		exit sub
+	end if
+	
+	push_mode()	
+	if detect_led()=YES then
+		exit sub
+	end if
+end sub
+
+sub push_power()
+	dim f as word
+	
+	pat.play("R~",PL_PAT_CANINT)
+	io.lineset(PL_IO_NUM_9_TX0,LOW)
+	for f=0 to 20000
+	next f
+	io.lineset(PL_IO_NUM_9_TX0,HIGH)
+	pat.play("-",PL_PAT_CANINT)
+	for f=0 to 10000
+	next f
+end sub
+
+sub push_mode()
+	dim f as word
+	
+	pat.play("G~",PL_PAT_CANINT)
+	io.lineset(PL_IO_NUM_8_RX0,LOW)
+	for f=0 to 20000
+	next f
+	io.lineset(PL_IO_NUM_8_RX0,HIGH)
+	pat.play("-",PL_PAT_CANINT)
+	for f=0 to 10000
+	next f
+end sub
+
+function detect_led() as no_yes
+	dim f as word
+	
+	for f=1 to 1000
+		if io.lineget(PL_IO_NUM_11_TX1)=LOW then
+			detect_led=YES
+			exit function
+		end if	
+	next
+	
+	detect_led=NO
+end function
+
+sub signal_strength_indication_init()
+	dim f as byte
+	
+	'make sure there is no reset
+	io.num=PL_IO_NUM_46
+	io.enabled=YES
+	io.state=HIGH
+
+	'we will be turning LEDs off
+	io.num=PL_IO_NUM_48
+	io.enabled=YES
+	io.state=HIGH
+	'make 5 clocks
+	io.num=PL_IO_NUM_47
+	io.enabled=YES
+	for f=0 to 4
+		io.state=LOW
+		io.state=HIGH
+	next f
+end sub
